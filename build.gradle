@@ -1,0 +1,83 @@
+import java.text.SimpleDateFormat
+
+group 'sync-db'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+apply plugin: 'application'
+
+mainClassName = 'com.nomad.app.Application'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+ext {
+    spring_boot_version = '2.1.4.RELEASE'
+    spring_framwork_version = '5.0.4.RELEASE'
+    hikariCP_version = '3.3.1'
+    postgres_version = '42.2.1'
+    oracle_version = '11.2.0.3'
+    xerces_version = '2.11.0'
+    jasper_version = '6.4.1'
+    olap4j_version = '1.2.0'
+    itext_version = '2.1.7'
+    groovy_version = '2.4.14'
+    pdfbox_version = '2.0.7'
+    apache_commons_version = '1.16.1'
+    hessian_version = '4.0.51'
+    junit_version = '4.12'
+}
+
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile fileTree("lib")
+    compile group: 'org.springframework.boot', name: 'spring-boot-starter-web', version: "${spring_boot_version}"
+    compile group: 'org.springframework', name: 'spring-jdbc', version: "${spring_framwork_version}"
+    compile group: 'com.zaxxer', name: 'HikariCP', version: "${hikariCP_version}"
+    compile group: 'org.postgresql', name: 'postgresql', version: "${postgres_version}"
+//    compile group: 'oracle', name: 'ojdbc6', version: "${oracle_version}"
+    compile group: 'xerces', name: 'xercesImpl', version: "${xerces_version}"
+    compile group: 'net.sf.jasperreports', name: 'jasperreports', version: "${jasper_version}"
+    compile group: 'org.olap4j', name: 'olap4j', version: "${olap4j_version}"
+    compile group: 'com.lowagie', name: 'itext', version: "${itext_version}"
+    compile group: 'org.codehaus.groovy', name: 'groovy-all', version: "${groovy_version}"
+    compile group: 'org.apache.pdfbox', name: 'pdfbox', version: "${pdfbox_version}"
+    compile group: 'org.apache.commons', name: 'commons-compress', version: "${apache_commons_version}"
+    compile "com.caucho:hessian:${hessian_version}"
+    testCompile group: 'junit', name: 'junit', version: "${junit_version}"
+}
+
+jar {
+    manifest {
+        attributes(
+                'Implementation-Title'  : "Application",
+                'Implementation-Version': "$version",
+                'Implementation-Vendor' : "NomaD",
+                'Built-By'              : System.properties['user.name'],
+                'Build-Timestamp'       : new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(new Date()),
+                'Created-By'            : "Gradle ${gradle.gradleVersion}",
+                'Build-JDK'             : "${System.properties['java.version']} (${System.properties['java.vendor']} ${System.properties['java.vm.version']})",
+                'Build-OS'              : "${System.properties['os.name']} ${System.properties['os.arch']} ${System.properties['os.version']}",
+                'App-Version'           : "${version}"
+        )
+    }
+}
+
+run {
+    classpath += files('src/main/dist/conf')
+}
+
+startScripts {
+    classpath += files('conf')
+    doLast {
+        unixScript.text = unixScript.text
+                .replaceAll('APP_HOME=', 'export APP_HOME=')
+                .replaceAll('\\$APP_HOME/lib/conf', '\\$APP_HOME/conf')
+        windowsScript.text = windowsScript.text
+                .replaceAll('%APP_HOME%\\\\lib\\\\conf', '%APP_HOME%\\\\conf')
+    }
+}

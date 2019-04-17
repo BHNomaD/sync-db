@@ -1,0 +1,68 @@
+# Application Properties
+spring:
+  profiles:
+    active: "basic"
+  main:
+    banner-mode: "off"
+
+---
+# Profile Name
+spring:
+  profiles: basic
+
+server:
+  port: 8099
+  servlet:
+    context-path: /application
+
+test:
+  value: 99
+
+max:
+  poolSize: 4
+
+logger:
+  table-name: logger
+
+
+# Logging Properties
+logging:
+  file: log/application.log
+  pattern:
+    file: "%d %-5level [%thread] %logger : %msg%n"
+  level:
+    com.tigerit.wdb.reports: INFO
+    org.springframework: ERROR, WARN
+
+# DB Properties
+db1:
+  driver: org.postgresql.Driver
+  url: jdbc:postgresql://192.168.4.177:5432/wdb2
+  user: app1
+  password: app1
+  fetchSize: 100
+  otime: 1970-01-01 00:00:00.000000
+  catalog: null
+  schema: app1
+  test-table: r4
+
+db2:
+  driver: org.postgresql.Driver
+  url: jdbc:postgresql://192.168.4.177:5432/wdb
+  user: app1
+  password: app1
+  fetchSize: 100
+  otime: 1970-01-01 00:00:00.000000
+  catalog: null
+  schema: app1
+  test-table: r1
+
+db3:
+  #  driver: oracle.jdbc.OracleDriver
+  driver: oracle.jdbc.oracle.OracleDriver
+  url: jdbc:oracle:thin:@192.168.5.120:1521:evrdb
+  user: tulip
+  password: tulip
+  fetchSize: 100
+  sync-table-list: TB1, BIOMETRIC
+  event-log-table-name: EVENT_LOG
