@@ -9,4 +9,5 @@ import java.util.Map;
  */
 public interface OracleDAO {
 	boolean createSimpleTrigger();
+	boolean executeQuery(String sql);
 }

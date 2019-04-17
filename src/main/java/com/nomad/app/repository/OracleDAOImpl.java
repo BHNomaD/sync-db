@@ -36,4 +36,20 @@ public class OracleDAOImpl implements OracleDAO {
 
         return true;
     }
+
+    @Override
+    public boolean executeQuery(String sql) {
+
+        logger.info("Getting started to execute query...");
+
+        try {
+            jdbcTemplate03.execute(sql);
+        } catch(Exception ex) {
+            logger.error("Error executing query :: ", ex);
+            return false;
+        }
+        logger.info("Query executed.");
+
+        return true;
+    }
 }
