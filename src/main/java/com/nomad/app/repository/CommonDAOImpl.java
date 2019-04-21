@@ -32,7 +32,8 @@ public class CommonDAOImpl implements CommonDAO {
         ResultSet rs = null;
 
         try {
-            rs = jdbcTemplate.getDataSource().getConnection().getMetaData().getImportedKeys(catalog, schema, table);
+            // catalog, schema and table-name is case sensitive
+            rs = jdbcTemplate.getDataSource().getConnection().getMetaData().getImportedKeys(catalog.toUpperCase(), schema.toUpperCase(), table.toUpperCase());
         } catch (SQLException ex) {
             logger.error("Error getting ImportedKeys for {}-{}-{} :: ", catalog, schema, table, ex);
         }
@@ -64,7 +65,8 @@ public class CommonDAOImpl implements CommonDAO {
         ResultSet rs = null;
 
         try {
-            rs = jdbcTemplate.getDataSource().getConnection().getMetaData().getPrimaryKeys(catalog, schema, table);
+            // catalog, schema and table-name is case sensitive
+            rs = jdbcTemplate.getDataSource().getConnection().getMetaData().getPrimaryKeys(catalog.toUpperCase(), schema.toUpperCase(), table.toUpperCase());
         } catch (SQLException e) {
             logger.error("Error in getPrimaryKeys() for originJdbcTemplate ", e);
         }

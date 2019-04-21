@@ -64,5 +64,7 @@ db3:
   user: tulip
   password: tulip
   fetchSize: 100
+  catalog: null
+  schema: tulip
   sync-table-list: TB1, BIOMETRIC
   event-log-table-name: EVENT_LOG

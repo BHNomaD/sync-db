@@ -9,11 +9,12 @@ import java.util.Map;
  * @author Md Shariful Islam
  */
 public interface TriggerTemplate {
-    boolean createEventTable(String tableName);
+    void process();
+    boolean createEventTable();
     List<String> getSyncTableList(String dbName);
     List<Tuple2<String, String>> getColumnInfo(String table);
-    List<String> getPrimaryKeys(String catalog, String schema, String table);
-    List<Map<String, Object>> getMetadataList(List<String> tableNameList);
-    void createTrigger(String tableName);
-    void createTriggerList(List<String> tableNameList);
+    List<String> getPrimaryKeys(String table);
+    void createInsertTriggerEachRow(String tableName, List<String> columnList, List<String> primaryKeys);
+    void createDeleteTriggerEachRow(String tableName, List<String> columnList, List<String> primaryKeys);
+    void createUpdateTriggerEachRow(String tableName, List<String> columnList, List<String> primaryKeys);
 }
