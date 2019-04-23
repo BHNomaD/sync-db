@@ -43,24 +43,34 @@ public class OracleTriggerImpl implements TriggerTemplate {
     @Value("${db3.event-log-table-name}")
     private String eventLongTableName;
 
+    @Value("${db3.sync-table-list}")
+    private String syncTableList;
+
     String eventLogColumnNames = "ID,ORIGINAL_TABLE_NAME,OPERATION,FILTER,NEW_DATA,OLD_DATA,CREATE_DATE_TIME,STATUS";
 
     @Override
     public void process(){
         //TODO - METHOD DONE
 //        CREATE IF NOT EXISTS EVENT TABLE
+        createEventTable();
 
         //TODO - METHOD DONE
 //        GET ALL TABLE NAME TO BE SYNC
+//        syncTableList
 
         //TODO - METHOD DONE
 //        GET COLUMN NAMES OF THE TABLES
-
-        //TODO - METHOD DONE
 //        GET PRIMARY KEYS OF THE TABLES
-
-        //TODO - METHOD DONE
 //        CREATE INSERT, UPDATE, DELETE TRIGGER TO THE TABLES
+
+        for ( String tableName : syncTableList.split("\\s*,\\s*")) {
+            List<String> columnList = new ArrayList<>();
+            getColumnInfo(tableName).forEach( col -> columnList.add(col.getFirst()));
+            List<String> primaryKeys = getPrimaryKeys(tableName);
+            createInsertTriggerEachRow(tableName, columnList, primaryKeys);
+            createDeleteTriggerEachRow(tableName, columnList, primaryKeys);
+            createUpdateTriggerEachRow(tableName, columnList, primaryKeys);
+        }
     }
 
     @Override
@@ -68,15 +78,15 @@ public class OracleTriggerImpl implements TriggerTemplate {
 
         logger.info("Preparing sql for create table with name {}", eventLongTableName);
 
-        String sql = " CREATE TABLE " + eventLongTableName.toUpperCase() + " (" +
-                    "    id INTEGER PRIMARY KEY," +
-                    "    original_table_name VARCHAR(100) NOT NULL," +
-                    "    operation VARCHAR(10) NOT NULL," +
-                    "    filter VARCHAR(200) NOT NULL," +
-                    "    new_data VARCHAR(200)," +
-                    "    old_data VARCHAR(200)," +
-                    "    create_date_time TIMESTAMP NOT NULL," +
-                    "    status VARCHAR(50) NOT NULL" +
+        String sql = " CREATE TABLE EVENT_LOG ( " +
+                    "   ID NUMBER NOT NULL PRIMARY KEY, " +
+                    "   ORIGINAL_TABLE_NAME VARCHAR2(100) NOT NULL, " +
+                    "   OPERATION VARCHAR2(10) NOT NULL, " +
+                    "   FILTER VARCHAR2(200) NOT NULL, " +
+                    "   NEW_DATA VARCHAR2(200), " +
+                    "   OLD_DATA VARCHAR2(200), " +
+                    "   CREATE_DATE_TIME TIMESTAMP(6) NOT NULL, " +
+                    "   STATUS VARCHAR2(50) NOT NULL " +
                     ")";
 
         String sqlForSeq = "CREATE SEQUENCE " + eventLongTableName.toUpperCase() + "_PK_SEQ START WITH 1 INCREMENT BY 1";

@@ -52,23 +52,9 @@ public class SyncManager {
 
     @PostConstruct
     private void init(){
-        //TODO
-//        String db01Catalog = env.getRequiredProperty("db1.catalog").equalsIgnoreCase("null")? null:env.getRequiredProperty("db1.catalog");
-//        String db02Catalog = env.getRequiredProperty("db2.catalog").equalsIgnoreCase("null")? null:env.getRequiredProperty("db2.catalog");
-//
-//        Map<String, Object> importKeyList = commonDAO.getImportedKeys( jdbcTemplate01, db01Catalog,db01Schema,db01TestTable);
-//        Map<String, Object> primaryKeyInfo = commonDAO.getPrimaryKeys( jdbcTemplate02, db02Catalog,db01Schema,db01TestTable);
-
-        String tableName = "BIOMETRIC";
-
         try {
-//            oracleDAO.createSimpleTrigger();
-            List<String> columnList = new ArrayList<>();
-            oracleTrigger.getColumnInfo(tableName).forEach( col -> columnList.add(col.getFirst()));
-            List<String> primaryKeys = oracleTrigger.getPrimaryKeys(tableName);
-            oracleTrigger.createInsertTriggerEachRow(tableName, columnList, primaryKeys);
-            oracleTrigger.createDeleteTriggerEachRow(tableName, columnList, primaryKeys);
-            oracleTrigger.createUpdateTriggerEachRow(tableName, columnList, primaryKeys);
+            //Create triggers for sync-table-list
+            oracleTrigger.process();
         } catch (Exception ex) {
             ex.printStackTrace();
         }
