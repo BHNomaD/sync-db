@@ -8,3 +8,6 @@
 build
 log
 out
+bin
+*~
+
