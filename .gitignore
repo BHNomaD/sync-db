@@ -4,6 +4,7 @@
 .project
 .classpath
 .settings
+*.iml
 build
 log
 out

@@ -26,6 +26,7 @@ ext {
     apache_commons_version = '1.16.1'
     hessian_version = '4.0.51'
     junit_version = '4.12'
+    tuples_version = '1.2'
 }
 
 
@@ -39,7 +40,6 @@ dependencies {
     compile group: 'org.springframework', name: 'spring-jdbc', version: "${spring_framwork_version}"
     compile group: 'com.zaxxer', name: 'HikariCP', version: "${hikariCP_version}"
     compile group: 'org.postgresql', name: 'postgresql', version: "${postgres_version}"
-//    compile group: 'oracle', name: 'ojdbc6', version: "${oracle_version}"
     compile group: 'xerces', name: 'xercesImpl', version: "${xerces_version}"
     compile group: 'net.sf.jasperreports', name: 'jasperreports', version: "${jasper_version}"
     compile group: 'org.olap4j', name: 'olap4j', version: "${olap4j_version}"
@@ -47,6 +47,7 @@ dependencies {
     compile group: 'org.codehaus.groovy', name: 'groovy-all', version: "${groovy_version}"
     compile group: 'org.apache.pdfbox', name: 'pdfbox', version: "${pdfbox_version}"
     compile group: 'org.apache.commons', name: 'commons-compress', version: "${apache_commons_version}"
+    compile group: 'org.javatuples', name: 'javatuples', version: "${tuples_version}"
     compile "com.caucho:hessian:${hessian_version}"
     testCompile group: 'junit', name: 'junit', version: "${junit_version}"
 }

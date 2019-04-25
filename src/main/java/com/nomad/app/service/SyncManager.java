@@ -1,19 +1,16 @@
 package com.nomad.app.service;
 
-import com.nomad.app.repository.CommonDAO;
-import com.nomad.app.repository.OracleDAO;
-import com.nomad.app.repository.OracleDAOImpl;
+import com.nomad.app.Application;
+import com.nomad.app.model.EventLog;
+import com.nomad.app.repository.FetchDAO;
 import com.nomad.app.repository.OracleTriggerImpl;
-import groovy.lang.Tuple2;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -21,6 +18,11 @@ import java.util.List;
  */
 @Service
 public class SyncManager {
+
+    private static final Logger logger = LoggerFactory.getLogger(SyncManager.class);
+
+    @Autowired
+    private Environment env;
 
 //    @Autowired
 //    @Qualifier("jdbc-01")
@@ -39,6 +41,9 @@ public class SyncManager {
     @Autowired
     OracleTriggerImpl oracleTrigger;
 
+    @Autowired
+    FetchDAO fetchDAO;
+
 //    @Value("${db1.schema}")
 //    private String db01Schema;
 //    @Value("${db1.test-table}")
@@ -55,6 +60,9 @@ public class SyncManager {
         try {
             //Create triggers for sync-table-list
             oracleTrigger.process();
+            List<EventLog> eventLogList = fetchDAO.getEvent(1, Integer.parseInt(env.getRequiredProperty("db4.sync-size")));
+            System.out.println(eventLogList);
+
         } catch (Exception ex) {
             ex.printStackTrace();
         }

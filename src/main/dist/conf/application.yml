@@ -37,34 +37,46 @@ logging:
 # DB Properties
 db1:
   driver: org.postgresql.Driver
-  url: jdbc:postgresql://192.168.4.177:5432/wdb2
-  user: app1
-  password: app1
+  url: jdbc:postgresql://_URL_1_:_PORT_1_/_DB1_
+  user: _USER_1_
+  password: _PASS_1_
   fetchSize: 100
   otime: 1970-01-01 00:00:00.000000
   catalog: null
-  schema: app1
+  schema: _SCHEMA_1_
   test-table: r4
 
 db2:
   driver: org.postgresql.Driver
-  url: jdbc:postgresql://192.168.4.177:5432/wdb
-  user: app1
-  password: app1
+  url: jdbc:postgresql://_URL_2_:_PORT_2_/_DB2_
+  user: _USER_2_
+  password: _PASS_2_
   fetchSize: 100
   otime: 1970-01-01 00:00:00.000000
   catalog: null
-  schema: app1
+  schema: _SCHEMA_2_
   test-table: r1
 
 db3:
   #  driver: oracle.jdbc.OracleDriver
   driver: oracle.jdbc.oracle.OracleDriver
-  url: jdbc:oracle:thin:@192.168.5.120:1521:evrdb
-  user: tulip
-  password: tulip
+  url: jdbc:oracle:thin:@_URL_3_:_PORT_3_:_DB3_
+  user: _USER_3_
+  password: _PASS_3_
   fetchSize: 100
   catalog: null
-  schema: tulip
-  sync-table-list: TB1, BIOMETRIC
+  schema: _SCHEMA_3_
+  sync-table-list: TB1, BIOMETRIC, SUPPLIER
   event-log-table-name: EVENT_LOG
+  sync-table-info: SYNC_TABLE_INFO
+
+db4:
+  driver: org.postgresql.Driver
+  url: jdbc:postgresql://_URL_4_:_PORT_4_/_DB4_
+  user: _USER_4_
+  password: _PASS_4_
+  fetchSize: 100
+  otime: 1970-01-01 00:00:00.000000
+  catalog: null
+  schema: _SCHEMA_4_
+  sync-size: 5

@@ -1,7 +1,7 @@
 package com.nomad.app.repository;
 
 import com.nomad.app.model.EnumerationList;
-import groovy.lang.Tuple2;
+import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +43,9 @@ public class OracleTriggerImpl implements TriggerTemplate {
     @Value("${db3.event-log-table-name}")
     private String eventLongTableName;
 
+    @Value("${db3.sync-table-info}")
+    private String syncTableInfo;
+
     @Value("${db3.sync-table-list}")
     private String syncTableList;
 
@@ -50,33 +53,69 @@ public class OracleTriggerImpl implements TriggerTemplate {
 
     @Override
     public void process(){
-        //TODO - METHOD DONE
+//        TODO CREATE TABLE TO STORE SYNC TABLE INFO
+        createSyncInfoTable(syncTableInfo);
+
 //        CREATE IF NOT EXISTS EVENT TABLE
         createEventTable();
 
-        //TODO - METHOD DONE
 //        GET ALL TABLE NAME TO BE SYNC
 //        syncTableList
 
-        //TODO - METHOD DONE
 //        GET COLUMN NAMES OF THE TABLES
 //        GET PRIMARY KEYS OF THE TABLES
 //        CREATE INSERT, UPDATE, DELETE TRIGGER TO THE TABLES
-
         for ( String tableName : syncTableList.split("\\s*,\\s*")) {
             List<String> columnList = new ArrayList<>();
-            getColumnInfo(tableName).forEach( col -> columnList.add(col.getFirst()));
+            String columnWithType = "";
+            for ( Triplet<String, String, Integer> col : getColumnInfo(tableName)) {
+                columnList.add(col.getValue0());
+                columnWithType = columnWithType + ", " + col.getValue0() + " " + col.getValue1() + " " + col.getValue2();
+            }
+            columnWithType = columnWithType.substring(2);
             List<String> primaryKeys = getPrimaryKeys(tableName);
+
+            storeSyncTableInfo(tableName, columnWithType, String.join(", ", primaryKeys));
+
             createInsertTriggerEachRow(tableName, columnList, primaryKeys);
             createDeleteTriggerEachRow(tableName, columnList, primaryKeys);
             createUpdateTriggerEachRow(tableName, columnList, primaryKeys);
         }
     }
 
+    private boolean storeSyncTableInfo(String tableName, String columnWithType, String uniqueColumns) {
+
+        String sql = "INSERT INTO " + syncTableInfo.toUpperCase() + " (ID, TABLE_NAME, COLUMN_LIST, UNIQUE_COLUMNS, CREATE_DATE_TIME, STATUS) " +
+                " VALUES (SYNC_TABLE_INFO_PK_SEQ.nextval, ?, ?, ?, current_timestamp, ?)";
+
+        try {
+            jdbcTemplate03.update(sql, tableName, columnWithType, uniqueColumns, "active");
+        } catch (Exception ex) {
+            logger.error("Error inserting sync-table-info with table-name {}", tableName);
+            return false;
+        }
+        return true;
+    }
+
+    private boolean createSyncInfoTable(String tableName) {
+
+        logger.info("Preparing sql for SYNC_TABLE_INFO table");
+
+        String sql = "CREATE TABLE " + tableName.toUpperCase() + " ( " +
+                    "   ID INTEGER PRIMARY KEY, " +
+                    "   TABLE_NAME VARCHAR(100) NOT NULL UNIQUE, " +
+                    "   COLUMN_LIST CLOB NOT NULL, " +
+                    "   UNIQUE_COLUMNS CLOB NOT NULL, " +
+                    "   CREATE_DATE_TIME TIMESTAMP NOT NULL, " +
+                    "   STATUS VARCHAR(20) NOT NULL " +
+                    " )";
+
+        return createTableWithSeq(tableName.toUpperCase(), sql);    }
+
     @Override
     public boolean createEventTable() {
 
-        logger.info("Preparing sql for create table with name {}", eventLongTableName);
+        logger.info("Preparing sql for EVENT_LOG table");
 
         String sql = " CREATE TABLE EVENT_LOG ( " +
                     "   ID NUMBER NOT NULL PRIMARY KEY, " +
@@ -89,25 +128,27 @@ public class OracleTriggerImpl implements TriggerTemplate {
                     "   STATUS VARCHAR2(50) NOT NULL " +
                     ")";
 
-        String sqlForSeq = "CREATE SEQUENCE " + eventLongTableName.toUpperCase() + "_PK_SEQ START WITH 1 INCREMENT BY 1";
+        return createTableWithSeq(eventLongTableName, sql);
+    }
 
-        logger.info("Preparing to execute create table with name {}", eventLongTableName);
+    private boolean createTableWithSeq(String tableName, String createTableSQL) {
 
         try {
-            jdbcTemplate03.execute(sql);
-            logger.info("Table created with name {}", eventLongTableName);
+            logger.info("Preparing to execute create table with name {}", tableName.toUpperCase());
+            jdbcTemplate03.execute(createTableSQL);
+            logger.info("Table created with name {}", tableName.toUpperCase());
         } catch (Exception ex) {
-            logger.error("Error creating table with name {}", eventLongTableName);
-            return false;
+            logger.error("Error creating table with name {}", tableName.toUpperCase());
+//            return false;
         }
 
         try {
+            String sqlForSeq = "CREATE SEQUENCE " + tableName.toUpperCase() + "_PK_SEQ START WITH 1 INCREMENT BY 1";
             jdbcTemplate03.execute(sqlForSeq);
-            logger.info("Sequence created for table {}", eventLongTableName);
+            logger.info("Sequence created for table {}", tableName.toUpperCase());
         } catch (Exception ex) {
-            logger.error("Error creating sequence for table {}", eventLongTableName);
+            logger.error("Error creating sequence for table {}", tableName.toUpperCase());
         }
-
         return true;
     }
 
@@ -118,8 +159,8 @@ public class OracleTriggerImpl implements TriggerTemplate {
     }
 
     @Override
-    public List<Tuple2<String, String>> getColumnInfo(String table) {
-        List<Tuple2<String, String>> columnInfos = commonDAO.getColumnInfo(jdbcTemplate03, table);
+    public List<Triplet<String, String, Integer>> getColumnInfo(String table) {
+        List<Triplet<String, String, Integer>> columnInfos = commonDAO.getColumnInfo(jdbcTemplate03, table);
         return columnInfos;
     }
 

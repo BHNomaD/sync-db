@@ -1,11 +1,9 @@
 package com.nomad.app.repository;
 
 import com.nomad.app.model.EnumerationList;
-import groovy.lang.Tuple2;
+import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -90,8 +88,11 @@ public class CommonDAOImpl implements CommonDAO {
     }
 
     @Override
-    public List<Tuple2<String, String>> getColumnInfo(JdbcTemplate jdbcTample, String table) {
-        String sql = "SELECT COLUMN_NAME, DATA_TYPE FROM USER_TAB_COLUMNS WHERE TABLE_NAME = ?";
-        return jdbcTample.query(sql, (rs, i) -> new Tuple2<>(rs.getString("COLUMN_NAME"), rs.getString("DATA_TYPE")), table);
+    public List<Triplet<String, String, Integer>> getColumnInfo(JdbcTemplate jdbcTample, String table) {
+        String sql = "SELECT COLUMN_NAME, DATA_TYPE, DATA_LENGTH FROM USER_TAB_COLUMNS WHERE TABLE_NAME = ?";
+        return jdbcTample.query(sql, (rs, i) -> new Triplet<>(
+                        rs.getString("COLUMN_NAME"),
+                        rs.getString("DATA_TYPE"),
+                        rs.getInt("DATA_LENGTH")), table);
     }
 }
