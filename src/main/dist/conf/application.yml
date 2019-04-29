@@ -69,8 +69,9 @@ db3:
   sync-table-list: TB1, BIOMETRIC, SUPPLIER
   event-log-table-name: EVENT_LOG
   sync-table-info: SYNC_TABLE_INFO
+  sink-db-list: sink-db1
 
-db4:
+sink-db1:
   driver: org.postgresql.Driver
   url: jdbc:postgresql://_URL_4_:_PORT_4_/_DB4_
   user: _USER_4_
@@ -80,3 +81,5 @@ db4:
   catalog: null
   schema: _SCHEMA_4_
   sync-size: 5
+  sync-table-list: TB1[UPDATE(ID,VALUE),INSERT(ID,VALUE,REMARKS)], BIOMETRIC[], SUPPLIER[UPDATE(SUPPLIER_ID,VALUE),INSERT(SUPPLIER_ID,VALUE)]
+  db-config-name: sink-db1

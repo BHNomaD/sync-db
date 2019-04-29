@@ -3,6 +3,8 @@ package com.nomad.app;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nomad.app.model.EnumerationList;
+import com.nomad.app.model.SinkDBConn;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +14,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.core.env.Environment;
@@ -104,6 +105,35 @@ public class Application implements WebMvcConfigurer {
         JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
         jdbcTemplate.setFetchSize(env.getRequiredProperty("db3.fetchSize", Integer.class));
         return jdbcTemplate;
+    }
+
+    @Bean(name = "sink-datasource-01")
+    public DataSource sinkDataSource01() {
+        HikariDataSource dataSource = new HikariDataSource();
+        dataSource.setDriverClassName(env.getRequiredProperty("sink-db1.driver"));
+        dataSource.setJdbcUrl(env.getRequiredProperty("sink-db1.url"));
+        dataSource.setUsername(env.getRequiredProperty("sink-db1.user"));
+        dataSource.setPassword(env.getRequiredProperty("sink-db1.password"));
+        dataSource.setAutoCommit(true);
+        dataSource.setMaximumPoolSize(env.getRequiredProperty("max.poolSize", Integer.class) * 2);
+        return dataSource;
+    }
+
+    @Bean(name = "sink-jdbc-01")
+    public JdbcTemplate sinkJdbcTemplate01(@Qualifier("sink-datasource-01") DataSource dataSource) {
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+        jdbcTemplate.setFetchSize(env.getRequiredProperty("sink-db1.fetchSize", Integer.class));
+        return jdbcTemplate;
+    }
+
+    @Bean(name = "sink-dbcon-01")
+    public SinkDBConn sinkDBConn01(@Qualifier("sink-datasource-01") DataSource dataSource) {
+
+        SinkDBConn sinkDBConn = new SinkDBConn(dataSource);
+        sinkDBConn.getJdbc().setFetchSize(env.getRequiredProperty("sink-db1.fetchSize", Integer.class));
+        sinkDBConn.getConfig().put(EnumerationList.Proeprties.DB_CONFIG_NAME, env.getRequiredProperty("db-config-name", String.class));
+
+        return sinkDBConn;
     }
 
     @Bean

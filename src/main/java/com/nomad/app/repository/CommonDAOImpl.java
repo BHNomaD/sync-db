@@ -1,6 +1,7 @@
 package com.nomad.app.repository;
 
 import com.nomad.app.model.EnumerationList;
+import com.nomad.app.model.TableInfo;
 import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,4 +96,15 @@ public class CommonDAOImpl implements CommonDAO {
                         rs.getString("DATA_TYPE"),
                         rs.getInt("DATA_LENGTH")), table);
     }
+
+    @Override
+    public TableInfo getTableInfo(JdbcTemplate jdbcTemplate, String tableName) {
+        logger.info("Preparing table-info of {}", tableName);
+        String sql = "SELECT TABLE_NAME, COLUMN_LIST, UNIQUE_COLUMNS FROM SYNC_TABLE_INFO WHERE UPPER(TABLE_NAME) = UPPER(?) AND STATUS = 'active'";
+        return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> new TableInfo()
+                .setTableName(rs.getString("TABLE_NAME"))
+                .setColumnList(rs.getString("COLUMN_LIST"))
+                .setUniqueColumns(rs.getString("UNIQUE_COLUMNS")), tableName);
+    }
+
 }

@@ -53,7 +53,7 @@ public class OracleTriggerImpl implements TriggerTemplate {
 
     @Override
     public void process(){
-//        TODO CREATE TABLE TO STORE SYNC TABLE INFO
+//        CREATE TABLE TO STORE SYNC TABLE INFO
         createSyncInfoTable(syncTableInfo);
 
 //        CREATE IF NOT EXISTS EVENT TABLE

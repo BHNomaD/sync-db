@@ -6,12 +6,12 @@ package com.nomad.app.model;
 public class EnumerationList {
 
     public enum JdbcTemplates {
-        originJdbcTemplate(10001),
-        duplicateJdbcTemplate(10002);
+        originJdbcTemplate(1001),
+        duplicateJdbcTemplate(1002);
 
         private int code;
 
-        private JdbcTemplates(int code) {
+        JdbcTemplates(int code) {
             this.code = code;
         }
 
@@ -26,7 +26,7 @@ public class EnumerationList {
                 }
             }
 
-            throw new IllegalArgumentException("Unknown code: " + code);
+            throw new IllegalArgumentException("Unknown code for JdbcTemplates: " + code);
         }
 
         @Override
@@ -37,24 +37,24 @@ public class EnumerationList {
     }
 
     public enum ImportedKeys {
-        PKTABLE_CAT(10101),
-        PKTABLE_SCHEM(10102),
-        PKTABLE_NAME(10103),
-        PKCOLUMN_NAME(10104),
-        FKTABLE_CAT(10105),
-        FKTABLE_SCHEM(10106),
-        FKTABLE_NAME(10107),
-        FKCOLUMN_NAME(10108),
-        KEY_SEQ(10109),
-        UPDATE_RULE(10110),
-        DELETE_RULE(10111),
-        FK_NAME(10112),
-        PK_NAME(10113),
-        DEFERRABILITY(10114);
+        PKTABLE_CAT(1101),
+        PKTABLE_SCHEM(1102),
+        PKTABLE_NAME(1103),
+        PKCOLUMN_NAME(1104),
+        FKTABLE_CAT(1105),
+        FKTABLE_SCHEM(1106),
+        FKTABLE_NAME(1107),
+        FKCOLUMN_NAME(1108),
+        KEY_SEQ(1109),
+        UPDATE_RULE(1110),
+        DELETE_RULE(1111),
+        FK_NAME(1112),
+        PK_NAME(1113),
+        DEFERRABILITY(1114);
 
         private int code;
 
-        private ImportedKeys(int code) {
+        ImportedKeys(int code) {
             this.code = code;
         }
 
@@ -69,7 +69,7 @@ public class EnumerationList {
                 }
             }
 
-            throw new IllegalArgumentException("Unknown code: " + code);
+            throw new IllegalArgumentException("Unknown code for ImportedKeys: " + code);
         }
 
         @Override
@@ -80,16 +80,16 @@ public class EnumerationList {
     }
 
     public enum PrimaryKeys {
-        TABLE_CAT(10201),
-        TABLE_SCHEM(10202),
-        TABLE_NAME(10203),
-        COLUMN_NAME(10204),
-        KEY_SEQ(10205),
-        PK_NAME(10206);
+        TABLE_CAT(1201),
+        TABLE_SCHEM(1202),
+        TABLE_NAME(1203),
+        COLUMN_NAME(1204),
+        KEY_SEQ(1205),
+        PK_NAME(1206);
 
         private int code;
 
-        private PrimaryKeys(int code) {
+        PrimaryKeys(int code) {
             this.code = code;
         }
 
@@ -104,7 +104,67 @@ public class EnumerationList {
                 }
             }
 
-            throw new IllegalArgumentException("Unknown code: " + code);
+            throw new IllegalArgumentException("Unknown code for PrimaryKeys: " + code);
+        }
+
+        @Override
+        public String toString() {
+            String s = super.toString();
+            return s.charAt(0) + s.substring(1);
+        }
+    }
+
+    public enum Operator {
+        INSERT(1301),
+        DELETE(1302),
+        UPDATE(1303);
+
+        private int code;
+
+        private Operator(int code) {
+            this.code = code;
+        }
+
+        public int getCode() {
+            return code;
+        }
+
+        public static Operator valueOf(int code) {
+            for (Operator s : Operator.values()) {
+                if (code == s.getCode()) {
+                    return s;
+                }
+            }
+            throw new IllegalArgumentException("Unknown code for Operator: " + code);
+        }
+
+        @Override
+        public String toString() {
+            String s = super.toString();
+            return s.charAt(0) + s.substring(1);
+        }
+    }
+
+    public enum Proeprties {
+        DB_CONFIG_NAME(1401);
+
+        private int code;
+
+        private Proeprties(int code) {
+            this.code = code;
+        }
+
+        public int getCode() {
+            return code;
+        }
+
+        public static Operator valueOf(int code) {
+            for (Operator s : Operator.values()) {
+                if (code == s.getCode()) {
+                    return s;
+                }
+            }
+            throw new IllegalArgumentException("Unknown code for Properties: " + code);
         }
 
         @Override
