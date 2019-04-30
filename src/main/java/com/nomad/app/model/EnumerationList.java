@@ -146,11 +146,33 @@ public class EnumerationList {
     }
 
     public enum Proeprties {
-        DB_CONFIG_NAME(1401);
+        DB_CONFIG_NAME("db-config-name"),
+        SYNC_SIZE("sync-size"),
+        ;
+
+        private String value;
+
+        private Proeprties(String value) {
+            this.value = value;
+        }
+
+        public String getValue() {
+            return value;
+        }
+    }
+
+    public enum ErrorHeader {
+        APPLICATION_ERROR(1501),
+        GENERAL_ERROR(1502),
+        PATH_NOT_EXISTS(1503),
+        REQUEST_ERROR(1504),
+        JASPER_ERROR(1505),
+        CREATE_ARCHIEVE_ERROR(1506),
+        ;
 
         private int code;
 
-        private Proeprties(int code) {
+        private ErrorHeader(int code) {
             this.code = code;
         }
 
@@ -158,13 +180,13 @@ public class EnumerationList {
             return code;
         }
 
-        public static Operator valueOf(int code) {
-            for (Operator s : Operator.values()) {
+        public static ErrorHeader valueOf(int code) {
+            for (ErrorHeader s : ErrorHeader.values()) {
                 if (code == s.getCode()) {
                     return s;
                 }
             }
-            throw new IllegalArgumentException("Unknown code for Properties: " + code);
+            throw new IllegalArgumentException("Unknown code for ErrorTitle: " + code);
         }
 
         @Override
@@ -173,5 +195,58 @@ public class EnumerationList {
             return s.charAt(0) + s.substring(1);
         }
     }
+
+    public enum State {
+        CREATING_ZIP(1601),
+        CLEANING_TEMPORARY_FILE(1602)
+        ;
+
+        private int code;
+
+        private State(int code) {
+            this.code = code;
+        }
+
+        public int getCode() {
+            return code;
+        }
+
+        public static State valueOf(int code) {
+            for (State s : State.values()) {
+                if (code == s.getCode()) {
+                    return s;
+                }
+            }
+            throw new IllegalArgumentException("Unknown code for State: " + code);
+        }
+
+        @Override
+        public String toString() {
+            String s = super.toString();
+            return s.charAt(0) + s.substring(1);
+        }
+
+    }
+
+    public enum LKPSttings {
+        CURRENT_IMPORT_POSITION("-1"),
+        IMPORT_POSITION_INIT_REMARKS("initialized"),
+        IMPORT_POSITION_INIT_REMARKS_ON_CONFLICT("initialized-earlier"),
+        ;
+
+        private String value;
+
+        private LKPSttings(String value) {
+            this.value = value;
+        }
+
+        public String getValue() {
+            return value;
+        }
+    }
+
+
+
+
 
 }

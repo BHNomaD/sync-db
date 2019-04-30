@@ -5,6 +5,7 @@ import com.nomad.app.core.SyncConfigurer;
 import com.nomad.app.model.EnumerationList;
 import com.nomad.app.model.EventLog;
 import com.nomad.app.model.SinkDBConn;
+import com.nomad.app.repository.DestinationDBDAO;
 import com.nomad.app.repository.FetchDAO;
 import com.nomad.app.repository.OracleTriggerImpl;
 import com.nomad.app.repository.PostgresDBDAOImpl;
@@ -38,7 +39,11 @@ public class SyncManager {
 //    @Autowired
 //    @Qualifier("jdbc-02")
 //    private JdbcTemplate jdbcTemplate02;
-//
+
+    @Autowired
+    @Qualifier("jdbc-03")
+    private JdbcTemplate jdbcTemplate03;
+
 //    @Autowired
 //    CommonDAO commonDAO;
 //
@@ -50,9 +55,6 @@ public class SyncManager {
 
     @Autowired
     OracleTriggerImpl oracleTrigger;
-
-    @Autowired
-    FetchDAO fetchDAO;
 
     @Autowired
     @Qualifier("sink-jdbc-01")
@@ -80,11 +82,21 @@ public class SyncManager {
         try {
             //Create triggers for sync-table-list
             oracleTrigger.process();
-            List<EventLog> eventLogList = fetchDAO.getEvent(1, Integer.parseInt(env.getRequiredProperty("sink-db1.sync-size")));
-            System.out.println(eventLogList);
+//            FetchDAO fetchDAO01 = beanFactory.getBean(FetchDAO.class, jdbcTemplate03);
+//            List<EventLog> eventLogList = fetchDAO01.getEvent(1, Integer.parseInt(env.getRequiredProperty("sink-db1.sync-size")));
+//            System.out.println(eventLogList);
 
-            PostgresDBDAOImpl postgresDBDAO01 = beanFactory.getBean(PostgresDBDAOImpl.class, sinkDBConn01);
+            DestinationDBDAO postgresDBDAO01 = beanFactory.getBean(DestinationDBDAO.class, jdbcTemplate03, sinkDBConn01);
             postgresDBDAO01.init();
+            postgresDBDAO01.syncData(false, false, false);
+            System.out.println(postgresDBDAO01.getSyncConfig());
+
+            postgresDBDAO01.dataImport();
+
+//            DestinationDBDAO postgresDBDAO02 = beanFactory.getBean(DestinationDBDAO.class, jdbcTemplate03, sinkDBConn01);
+//            postgresDBDAO02.init();
+//            postgresDBDAO02.syncData(true, true, false);
+//            System.out.println(postgresDBDAO02.getSyncConfig());
             //TODO auto-determine sink-db-name
 
 

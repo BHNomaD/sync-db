@@ -15,6 +15,11 @@ server:
   servlet:
     context-path: /application
 
+# Required Property
+source:
+  db-list: db3
+#  db-list: db3, db4
+
 test:
   value: 99
 
@@ -70,6 +75,9 @@ db3:
   event-log-table-name: EVENT_LOG
   sync-table-info: SYNC_TABLE_INFO
   sink-db-list: sink-db1
+
+#db4:
+#  sink-db-list: sink-db3, sink-db2
 
 sink-db1:
   driver: org.postgresql.Driver

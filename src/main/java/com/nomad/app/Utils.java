@@ -1,7 +1,7 @@
 package com.nomad.app;
 
-import com.nomad.app.model.ErrorDetails;
-import com.nomad.app.model.State;
+import com.nomad.app.exception.ApplicationException;
+import com.nomad.app.model.EnumerationList;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.utils.IOUtils;
@@ -130,7 +130,7 @@ public class Utils {
     public static void cleanFiles(String reportDir, String sourcePDFBaseName) throws ApplicationException {
         final File folder = new File(reportDir);
         final File[] files = folder.listFiles((dir, name) -> name.matches(sourcePDFBaseName + ".*pdf"));
-        State reportGenerationState = State.CLEANING_TEMPORARY_FILE;
+        EnumerationList.State reportGenerationState = EnumerationList.State.CLEANING_TEMPORARY_FILE;
 
         boolean isAllFilesDeleted = true;
         for (final File file : files) {
@@ -142,7 +142,7 @@ public class Utils {
     }
 
     public static void createZipArchive(String fileBaseDir, List<String> files, String zipFileName) throws ApplicationException {
-        State reportGenerationState = State.CREATING_ZIP;
+        EnumerationList.State reportGenerationState = EnumerationList.State.CREATING_ZIP;
         try {
             FileOutputStream fos = new FileOutputStream(zipFileName);
             ZipOutputStream zos = new ZipOutputStream(fos);
@@ -155,7 +155,7 @@ public class Utils {
             fos.close();
         } catch (IOException ioex) {
             ioex.printStackTrace();
-            throw new ApplicationException(ErrorDetails.CREATE_ARCHIEVE_ERROR, reportGenerationState.getValue(), ioex);
+            throw new ApplicationException(EnumerationList.ErrorHeader.CREATE_ARCHIEVE_ERROR, ioex);
         }
     }
 

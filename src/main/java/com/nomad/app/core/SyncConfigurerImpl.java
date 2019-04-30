@@ -9,10 +9,8 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author Md Shariful Islam
@@ -25,25 +23,59 @@ public class SyncConfigurerImpl implements SyncConfigurer {
     @Autowired
     Environment environment;
 
-    private List<String> dbList;
+    private List<String> sinkDbList = new ArrayList<>();
+    private Set<String> sinkDbSet = new HashSet<>();
     private Map<String, List<String>> tableList = new HashMap<>();
     private Map<Triplet<String, String, String>, List<String>> columnList = new HashMap<>();
+    Map<String, Map<String, String>> propertiesMap = new HashMap<>();
 
 
     @PostConstruct
     public void init(){
-        for (String db : getSyncDBList(true)) {
+        for (String db : getSyncDBSet(true)) {
             getSyncTableList(db, true);
             storeSyncColumnList(db);
+            loadPropertiesMap(db);
         }
     }
 
     @Override
+    public Map<String, String> getPropertiesMap(String db, boolean isRefresh) {
+        if(propertiesMap.containsKey(db) == false || isRefresh) {
+            loadPropertiesMap(db);
+        }
+        return propertiesMap.get(db);
+    }
+
+    private boolean loadPropertiesMap(String db) {
+        Map<String, String> map = new HashMap<>();
+        for (EnumerationList.Proeprties p : EnumerationList.Proeprties.values()) {
+            map.put(p.toString(), environment.getProperty( db + "." + p.getValue()));
+        }
+        propertiesMap.put(db, map);
+        return true;
+    }
+
+    @Override
     public List<String> getSyncDBList(boolean isRefresh) {
-        if(dbList != null && isRefresh == false) return dbList;
+        if(sinkDbList.size() > 0 && isRefresh == false) return sinkDbList;
         logger.info("Getting sync-db-list");
-        dbList = Arrays.asList(environment.getRequiredProperty("db3.sink-db-list").split("\\s*,\\s*"));
-        return dbList;
+        for ( String sourceDb : environment.getRequiredProperty("source.db-list").split("\\s*,\\s*")) {
+            sinkDbList.addAll(Arrays.asList(environment.getRequiredProperty(sourceDb + ".sink-db-list").split("\\s*,\\s*")));
+        }
+        return sinkDbList;
+    }
+
+    @Override
+    public Set<String> getSyncDBSet(boolean isRefresh) {
+        if(sinkDbSet.size() > 0 && isRefresh == false) return sinkDbSet;
+        logger.info("Getting sync-db-list");
+        for ( String sourceDb : environment.getRequiredProperty("source.db-list").split("\\s*,\\s*")) {
+            sinkDbSet.addAll(Arrays.stream(environment.getRequiredProperty(sourceDb + ".sink-db-list").split("\\s*,\\s*")).collect(Collectors.toSet()));
+//            In JDK 9+
+//            sinkDbSet.addAll(Set.of(environment.getRequiredProperty(sourceDb + ".sink-db-list").split("\\s*,\\s*")));
+        }
+        return sinkDbSet;
     }
 
     @Override
@@ -66,7 +98,7 @@ public class SyncConfigurerImpl implements SyncConfigurer {
 
     @Override
     public Map<Triplet<String, String, String>, List<String>> getAllColumnList() {
-        for (String db : getSyncDBList(true) ) {
+        for (String db : getSyncDBSet(false) ) {
             storeSyncColumnList(db);
         }
         return columnList;

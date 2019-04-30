@@ -131,7 +131,8 @@ public class Application implements WebMvcConfigurer {
 
         SinkDBConn sinkDBConn = new SinkDBConn(dataSource);
         sinkDBConn.getJdbc().setFetchSize(env.getRequiredProperty("sink-db1.fetchSize", Integer.class));
-        sinkDBConn.getConfig().put(EnumerationList.Proeprties.DB_CONFIG_NAME, env.getRequiredProperty("db-config-name", String.class));
+        sinkDBConn.getConfig().put(EnumerationList.Proeprties.DB_CONFIG_NAME,
+                env.getRequiredProperty(EnumerationList.Proeprties.DB_CONFIG_NAME.getValue(), String.class));
 
         return sinkDBConn;
     }
