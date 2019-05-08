@@ -18,13 +18,15 @@ server:
 # Required Property
 source:
   db-list: db3
-#  db-list: db3, db4
+
+sink:
+  db-list: sink-db1
 
 test:
   value: 99
 
 max:
-  poolSize: 4
+  poolSize: 10
 
 logger:
   table-name: logger
@@ -64,7 +66,8 @@ db2:
 
 db3:
   #  driver: oracle.jdbc.OracleDriver
-  driver: oracle.jdbc.oracle.OracleDriver
+  db-type: oracle
+  driver: oracle.jdbc.OracleDriver
   url: jdbc:oracle:thin:@_URL_3_:_PORT_3_:_DB3_
   user: _USER_3_
   password: _PASS_3_
@@ -73,6 +76,7 @@ db3:
   schema: _SCHEMA_3_
   sync-table-list: TB1, BIOMETRIC, SUPPLIER
   event-log-table-name: EVENT_LOG
+  event-log-column-list: ID,ORIGINAL_TABLE_NAME,OPERATION,FILTER,NEW_DATA,OLD_DATA,CREATE_DATE_TIME,STATUS
   sync-table-info: SYNC_TABLE_INFO
   sink-db-list: sink-db1
 
@@ -80,6 +84,7 @@ db3:
 #  sink-db-list: sink-db3, sink-db2
 
 sink-db1:
+  db-type: postgresql
   driver: org.postgresql.Driver
   url: jdbc:postgresql://_URL_4_:_PORT_4_/_DB4_
   user: _USER_4_
@@ -91,3 +96,4 @@ sink-db1:
   sync-size: 5
   sync-table-list: TB1[UPDATE(ID,VALUE),INSERT(ID,VALUE,REMARKS)], BIOMETRIC[], SUPPLIER[UPDATE(SUPPLIER_ID,VALUE),INSERT(SUPPLIER_ID,VALUE)]
   db-config-name: sink-db1
+  source-db: db3

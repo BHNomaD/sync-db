@@ -147,7 +147,15 @@ public class EnumerationList {
 
     public enum Proeprties {
         DB_CONFIG_NAME("db-config-name"),
+        SOURCE_DB("source-db"),
         SYNC_SIZE("sync-size"),
+        EVENT_LOG_COLUMN_LIST("event-log-column-list"),
+        SCHEMA("schema"),
+        CATALOG("catalog"),
+        EVENT_LOG_TABLE_NAME("event-log-table-name"),
+        SYNC_TABLE_INFO("sync-table-info"),
+        SYNC_TABLE_LIST("sync-table-list"),
+        DB_TYPE("db-type"),
         ;
 
         private String value;
@@ -244,9 +252,4 @@ public class EnumerationList {
             return value;
         }
     }
-
-
-
-
-
 }

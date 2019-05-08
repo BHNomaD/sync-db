@@ -1,10 +1,12 @@
 package com.nomad.app.repository;
 
+import com.nomad.app.core.SyncConfigurer;
 import com.nomad.app.model.EnumerationList;
 import com.nomad.app.model.TableInfo;
 import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -22,6 +24,9 @@ import java.util.Map;
 public class CommonDAOImpl implements CommonDAO {
 
     private static final Logger logger = LoggerFactory.getLogger(CommonDAOImpl.class);
+
+    @Autowired
+    SyncConfigurer syncConfigurer;
 
 
     @Override
@@ -98,13 +103,18 @@ public class CommonDAOImpl implements CommonDAO {
     }
 
     @Override
-    public TableInfo getTableInfo(JdbcTemplate jdbcTemplate, String tableName) {
+    public TableInfo getTableInfo(JdbcTemplate jdbcTemplate, String dbName, String tableName) {
         logger.info("Preparing table-info of {}", tableName);
-        String sql = "SELECT TABLE_NAME, COLUMN_LIST, UNIQUE_COLUMNS FROM SYNC_TABLE_INFO WHERE UPPER(TABLE_NAME) = UPPER(?) AND STATUS = 'active'";
-        return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> new TableInfo()
-                .setTableName(rs.getString("TABLE_NAME"))
-                .setColumnList(rs.getString("COLUMN_LIST"))
-                .setUniqueColumns(rs.getString("UNIQUE_COLUMNS")), tableName);
+        TableInfo tableInfo;
+        if(syncConfigurer.getTableInfo(dbName, tableName) == null) {
+            String sql = "SELECT TABLE_NAME, COLUMN_LIST, UNIQUE_COLUMNS FROM SYNC_TABLE_INFO WHERE UPPER(TABLE_NAME) = UPPER(?) AND STATUS = 'active'";
+             tableInfo = jdbcTemplate.queryForObject(sql, (rs, rowNum) -> new TableInfo()
+                    .setTableName(rs.getString("TABLE_NAME"))
+                    .setColumnMap(rs.getString("COLUMN_LIST"))
+                    .setUniqueColumns(rs.getString("UNIQUE_COLUMNS")), tableName);
+            syncConfigurer.addTableInfo(dbName, tableName, tableInfo);
+        }
+        return syncConfigurer.getTableInfo(dbName, tableName);
     }
 
 }

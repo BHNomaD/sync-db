@@ -3,20 +3,21 @@ package com.nomad.app.repository;
 import com.nomad.app.core.SyncConfigurer;
 import com.nomad.app.model.EnumerationList;
 import com.nomad.app.model.EventLog;
-import com.nomad.app.model.SinkDBConn;
 import com.nomad.app.model.TableInfo;
+import org.javatuples.Pair;
 import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.util.Arrays;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -41,7 +42,8 @@ public class PostgresDBDAOImpl implements DestinationDBDAO {
     private JdbcTemplate sourceJdbc;
     private JdbcTemplate sinkJdbc;
     private FetchDAO fetchDAO;
-    private String dbName;
+    private String sinkDBName;
+    private String sourceDBName;
 
     private int currentEvenetPos = -2;
 
@@ -49,17 +51,23 @@ public class PostgresDBDAOImpl implements DestinationDBDAO {
     private boolean isDelete = true;
     private boolean isUpdate = true;
 
-    PostgresDBDAOImpl(JdbcTemplate sourceJdbc, SinkDBConn sinkDBConn) {
+    private Map<String, String> insertSQLList = new HashMap<>();
+    private Map<String, String> deleteSQLList = new HashMap<>();
+//    private Map<String, Pair<String, String>> updateSQLList = new HashMap<>();
+
+
+    @Override
+    public void init(JdbcTemplate sourceJdbc, JdbcTemplate sinkJdbc, String sourceDBName, String sinkDBName) {
         this.sourceJdbc = sourceJdbc;
-        this.sinkJdbc = sinkDBConn.getJdbc();
-        this.dbName = sinkDBConn.getConfig().get(EnumerationList.Proeprties.DB_CONFIG_NAME);
+        this.sinkJdbc = sinkJdbc;
+        this.sinkDBName = sinkDBName;
+        this.sourceDBName = sourceDBName;
 
-    }
-
-    public void init() {
         fetchDAO = beanFactory.getBean(FetchDAO.class, this.sourceJdbc);
-        for (String tableName : syncConfigurer.getSyncTableList(this.dbName, false)) {
+        for (String tableName : syncConfigurer.getSyncTableList(this.sinkDBName, false)) {
             createSyncTable(tableName);
+            prepareInsertSQL(tableName);
+            prepareDeleteSQL(tableName);
         }
         initSyncLookupData();
         currentEvenetPos = getCurrentEventPos();
@@ -68,7 +76,8 @@ public class PostgresDBDAOImpl implements DestinationDBDAO {
     @Override
     public boolean createSyncTable(String tableName) {
         try {
-            TableInfo tableInfo = commonDAO.getTableInfo(sourceJdbc, tableName);
+            TableInfo tableInfo = commonDAO.getTableInfo(sourceJdbc, sourceDBName, tableName);
+            sourceJdbc.getDataSource().getConnection().getCatalog();
             createTable(tableInfo);
         } catch (Exception ex) {
             logger.error("Error creating sink-table", ex);
@@ -88,17 +97,18 @@ public class PostgresDBDAOImpl implements DestinationDBDAO {
     @Override
     public boolean dataImport() {
         //TODO
+        logger.info("in data-import");
         List<EventLog> eventLogList = fetchDAO.getEvent(currentEvenetPos,
-                Integer.parseInt(syncConfigurer.getPropertiesMap(dbName,false)
+                Integer.parseInt(syncConfigurer.getPropertiesMap(sinkDBName,false)
                         .get(EnumerationList.Proeprties.SYNC_SIZE.toString())));
 
         eventLogList.forEach( eventLog -> {
             if(eventLog.getOperation().equalsIgnoreCase(EnumerationList.Operator.INSERT.toString())) {
-                syncInsert(eventLog.getOriginalTableName(), eventLog.getFilter(), eventLog.getNewData());
+                syncInsert(eventLog.getOriginalTableName(), eventLog.getNewData());
             } else if(eventLog.getOperation().equalsIgnoreCase(EnumerationList.Operator.DELETE.toString())) {
-                syncDelete();
+                syncDelete(eventLog.getOriginalTableName(),eventLog.getFilter());
             } else if(eventLog.getOperation().equalsIgnoreCase(EnumerationList.Operator.UPDATE.toString())) {
-                syncUpdate();
+                syncUpdate(eventLog.getOriginalTableName(), eventLog.getFilter(), eventLog.getNewData());
             }
         });
 
@@ -106,35 +116,48 @@ public class PostgresDBDAOImpl implements DestinationDBDAO {
     }
 
     @Override
-    public boolean syncInsert(String tableName, String filter, byte[] data) {
-        //TODO
-        boolean allColumn = false;
-        List<String> columnList = syncConfigurer.getSyncColumnList(dbName,tableName,EnumerationList.Operator.INSERT,false);
-
-        String sql = "INSERT INTO " + tableName.toUpperCase() + " VALUES ( ";
-        if(columnList == null || columnList.size() == 0) allColumn = true;
-
-        String str = Arrays.toString(data);
-        for (String s : str.split("\\s*,\\s*")) {
-            String com[] = s.split("\\s*=\\s*");
-            if(allColumn == true || columnList.contains(com[0])) {
-
-            }
-        }
-
-        return false;
+    public boolean syncInsert(String tableName, byte[] data) {
+        Map<String, Object> dataMap = getByteArrayToDataMap(tableName, data);
+        List<Object> insertObjectList = prepareObjectList(dataMap,
+                syncConfigurer.getSyncColumnList(sinkDBName,tableName,EnumerationList.Operator.INSERT,false));
+        sinkJdbc.update(insertSQLList.get(tableName), insertObjectList);
+        return true;
     }
 
     @Override
-    public boolean syncDelete() {
-        //TODO
-        return false;
+    public boolean syncDelete(String tableName, String filter) {
+        Map<String, Object> dataMap = getStringToDataMap(tableName, filter);
+        List<Object> filterObjectList = prepareObjectList(dataMap,
+                syncConfigurer.getSyncColumnList(sinkDBName,tableName,EnumerationList.Operator.DELETE,false));
+        sinkJdbc.update(deleteSQLList.get(tableName), filterObjectList);
+        return true;
     }
 
     @Override
-    public boolean syncUpdate() {
+    public boolean syncUpdate(String tableName, String filter, byte[] data) {
 
-        return false;
+        var ref = new Object() {
+            String prefix = "";
+            String suffix = "";
+            List<Object> objectList = new ArrayList<>();
+        };
+
+        Map<String, Object> setDataMap = getByteArrayToDataMap(tableName, data);
+        Map<String, Object> filterDataMap = getStringToDataMap(tableName, filter);
+
+        setDataMap.forEach( (name, value) -> {
+            ref.prefix = ref.prefix + ", " + name + " = ?";
+            ref.objectList.add(value);
+        });
+        filterDataMap.forEach( (name, value) -> {
+            ref.suffix = ref.suffix + ", " + name + " = ?";
+            ref.objectList.add(value);
+        });
+
+        String sql = "UPDATE " + tableName.toUpperCase() + " SET " + ref.prefix.substring(1) + " WHERE " + ref.suffix.substring(1);
+        sinkJdbc.update(sql, ref.objectList);
+
+        return true;
     }
 
     @Override
@@ -147,24 +170,27 @@ public class PostgresDBDAOImpl implements DestinationDBDAO {
 
         try {
             logger.info("Creating sql for create sink table {}", tableInfo.getTableName());
-            String sql = " CREATE TABLE IF NOT EXISTS " + tableInfo.getTableName().toUpperCase() + " ( ";
-            for (String columnInfo : tableInfo.getColumnList().split("\\s*,\\s*")) {
-                String tmp[] = columnInfo.split("\\s+");
-                sql = sql + " " + tmp[0].toUpperCase() + " ";
-                if (tmp[1].toUpperCase().equalsIgnoreCase("VARCHAR2") || tmp[1].toUpperCase().equalsIgnoreCase("VARCHAR")) {
-                    sql = sql + " " + "VARCHAR" + "(" + tmp[2] + "), ";
-                } else if (tmp[1].toUpperCase().equalsIgnoreCase("NUMBER") && Integer.parseInt(tmp[2]) < 10) {
-                    sql = sql + " " + "INT" + ", ";
-                } else if (tmp[1].toUpperCase().equalsIgnoreCase("NUMBER") && Integer.parseInt(tmp[2]) > 9) {
-                    sql = sql + " " + "BIGINT" + ", ";
+            var ref = new Object() {
+                String sql = " CREATE TABLE IF NOT EXISTS " + tableInfo.getTableName().toUpperCase() + " ( ";
+            };
+
+            tableInfo.getColumnMap().forEach( (name, desc) -> {
+                ref.sql = ref.sql + " " + name.toUpperCase() + " ";
+
+                if (desc.getValue0().toUpperCase().equalsIgnoreCase("VARCHAR2") || desc.getValue0().toUpperCase().equalsIgnoreCase("VARCHAR")) {
+                    ref.sql = ref.sql + " " + "VARCHAR" + "(" + desc.getValue1() + "), ";
+                } else if (desc.getValue0().toUpperCase().equalsIgnoreCase("NUMBER") && Integer.parseInt(desc.getValue1()) < 10) {
+                    ref.sql = ref.sql + " " + "INT" + ", ";
+                } else if (desc.getValue0().toUpperCase().equalsIgnoreCase("NUMBER") && Integer.parseInt(desc.getValue1()) > 9) {
+                    ref.sql = ref.sql + " " + "BIGINT" + ", ";
                 } else {
-                    sql = sql + " " + tmp[1] + ", ";
+                    ref.sql = ref.sql + " " + desc.getValue0() + ", ";
                 }
-            }
-            sql = sql.substring(0, sql.length() - 2) + " ) ";
+            });
+            ref.sql = ref.sql.substring(0, ref.sql.length() - 2) + " ) ";
 
             logger.info("Preparing to execute create-table {}", tableInfo.getTableName());
-            sinkJdbc.execute(sql);
+            sinkJdbc.execute(ref.sql);
         } catch (Exception ex) {
             logger.error("Error creating table from table-info: ", ex);
             return false;
@@ -201,5 +227,80 @@ public class PostgresDBDAOImpl implements DestinationDBDAO {
     @Override
     public Triplet<Boolean, Boolean, Boolean> getSyncConfig() {
         return new Triplet<>(this.isInsert, this.isDelete, this.isUpdate);
+    }
+
+    private Map<String, Object> getByteArrayToDataMap(String tableName, byte[] data) {
+        String dataStr = data.toString();
+        return getStringToDataMap(tableName, dataStr);
+    }
+
+    private Map<String, Object> getStringToDataMap(String tableName, String dataStr) {
+
+        Map<String, Object> retMap = new HashMap<>();
+        TableInfo tableInfo = syncConfigurer.getTableInfo(this.sourceDBName, tableName);
+
+        for(String fragment : dataStr.split("\\s*,\\s*")) {
+            String[] fragmentArray = fragment.split("\\s*>\\s*");
+
+            Object object = null;
+            String columnType = tableInfo.getColumnMap().get(fragmentArray[0]).getValue1();
+            if( columnType.equalsIgnoreCase("VARCHAR") || columnType.equalsIgnoreCase("VARCHAR2")) {
+                object = fragmentArray[1];
+            } else if(columnType.equalsIgnoreCase("INT")) {
+                object = Integer.parseInt(fragmentArray[1]);
+            } else if(columnType.equalsIgnoreCase("NUMBER")) {
+                object = new BigInteger(fragmentArray[1]);
+            } else if(columnType.equalsIgnoreCase("BLOB") || columnType.equalsIgnoreCase("CLOB")) {
+                object = fragmentArray[1].getBytes();
+            }
+            retMap.put(fragmentArray[0], object);
+        }
+        return retMap;
+    }
+
+    private boolean prepareInsertSQL(String tableName) {
+        List<String> columnList = syncConfigurer.getSyncColumnList(sinkDBName,tableName,EnumerationList.Operator.INSERT,false);
+
+        String sql = "INSERT INTO " + tableName.toUpperCase();
+        String prefix = "";
+        String suffix = "";
+        for (String column : columnList) {
+            prefix = prefix + ", " + column;
+            suffix = suffix + ", " + "?";
+        }
+        sql = sql + "( " + prefix.substring(1) + ") " + " VALUES ( " + suffix.substring(1) + ")";
+        insertSQLList.put(tableName, sql);
+        return true;
+    }
+
+    private boolean prepareDeleteSQL(String tableName) {
+
+        String sql = "DELETE FROM " + tableName.toUpperCase() + " WHERE ";
+        String suffix = "";
+        for (String column : syncConfigurer.getTableInfo(this.sourceDBName, tableName).getUniqueColumns().split("\\s*,\\s*")) {
+            suffix = suffix + ", " + column + " = ?";
+        }
+        sql = sql + " " + suffix.substring(1);
+
+        deleteSQLList.put(tableName, sql);
+        return true;
+    }
+
+    private boolean prepareUpdateSQL(String tableName) {
+        //TODO
+        // May not needed
+        return true;
+    }
+
+    private List<Object> prepareObjectList(Map<String, Object> dataMap, List<String> columnList) {
+        List<Object> objectList = new ArrayList<>();
+        for (String column : columnList) {
+            if(dataMap.containsKey(column)) {
+                objectList.add(dataMap.get(column));
+            } else {
+                objectList.add(null);
+            }
+        }
+        return objectList;
     }
 }

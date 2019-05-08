@@ -1,6 +1,8 @@
 package com.nomad.app.core;
 
 import com.nomad.app.model.EnumerationList;
+import com.nomad.app.model.TableInfo;
+import org.javatuples.Pair;
 import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,7 +12,6 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * @author Md Shariful Islam
@@ -23,20 +24,64 @@ public class SyncConfigurerImpl implements SyncConfigurer {
     @Autowired
     Environment environment;
 
-    private List<String> sinkDbList = new ArrayList<>();
-    private Set<String> sinkDbSet = new HashSet<>();
+    private Set<String> sourceDBSet = new HashSet<>();
+    private Set<String> sinkDBSet = new HashSet<>();
+    private Map<String, List<String>> sourceToSinkMap = new HashMap<>();
+    private Map<String, String> sinkToSourceMap = new HashMap<>();
     private Map<String, List<String>> tableList = new HashMap<>();
+    private Map<Pair<String, String>, TableInfo> tableInfoMap = new HashMap<>();
     private Map<Triplet<String, String, String>, List<String>> columnList = new HashMap<>();
     Map<String, Map<String, String>> propertiesMap = new HashMap<>();
 
 
     @PostConstruct
     public void init(){
-        for (String db : getSyncDBSet(true)) {
+        for (String db : getSinkDBSet(true)) {
             getSyncTableList(db, true);
             storeSyncColumnList(db);
             loadPropertiesMap(db);
         }
+        loadSourceSinkMap();
+    }
+
+    @Override
+    public Set<String> getSourceDBSet(boolean isRefresh) {
+        if(sourceDBSet.size() > 0 && isRefresh == false) return sourceDBSet;
+        logger.info("Getting source-db-list");
+        sourceDBSet.addAll(Set.of(environment.getRequiredProperty("source.db-list").split("\\s*,\\s*")));
+        return sourceDBSet;
+    }
+
+    @Override
+    public Set<String> getSinkDBSet(boolean isRefresh) {
+        if(sinkDBSet.size() > 0 && isRefresh == false) return sinkDBSet;
+        logger.info("Getting sink-db-list");
+        for ( String sourceDb : getSourceDBSet(true)) {
+            sinkDBSet.addAll(Set.of(environment.getRequiredProperty(sourceDb + ".sink-db-list").split("\\s*,\\s*")));
+        }
+        return sinkDBSet;
+    }
+
+    @Override
+    public Map<String, List<String>> getSourceToSinkMap() {
+        return sourceToSinkMap;
+    }
+
+    @Override
+    public Map<String, String> getSinkToSourceMap() {
+        return sinkToSourceMap;
+    }
+
+    @Override
+    public TableInfo getTableInfo(String dbName, String tableName) {
+        if(tableInfoMap.containsKey(new Pair<>(dbName, tableName))) {
+            return tableInfoMap.get(new Pair<>(dbName, tableName));
+        } else return null;
+    }
+
+    @Override
+    public void addTableInfo(String dbName, String tableName, TableInfo tableInfo) {
+        tableInfoMap.put(new Pair<>(dbName, tableName), tableInfo);
     }
 
     @Override
@@ -45,37 +90,6 @@ public class SyncConfigurerImpl implements SyncConfigurer {
             loadPropertiesMap(db);
         }
         return propertiesMap.get(db);
-    }
-
-    private boolean loadPropertiesMap(String db) {
-        Map<String, String> map = new HashMap<>();
-        for (EnumerationList.Proeprties p : EnumerationList.Proeprties.values()) {
-            map.put(p.toString(), environment.getProperty( db + "." + p.getValue()));
-        }
-        propertiesMap.put(db, map);
-        return true;
-    }
-
-    @Override
-    public List<String> getSyncDBList(boolean isRefresh) {
-        if(sinkDbList.size() > 0 && isRefresh == false) return sinkDbList;
-        logger.info("Getting sync-db-list");
-        for ( String sourceDb : environment.getRequiredProperty("source.db-list").split("\\s*,\\s*")) {
-            sinkDbList.addAll(Arrays.asList(environment.getRequiredProperty(sourceDb + ".sink-db-list").split("\\s*,\\s*")));
-        }
-        return sinkDbList;
-    }
-
-    @Override
-    public Set<String> getSyncDBSet(boolean isRefresh) {
-        if(sinkDbSet.size() > 0 && isRefresh == false) return sinkDbSet;
-        logger.info("Getting sync-db-list");
-        for ( String sourceDb : environment.getRequiredProperty("source.db-list").split("\\s*,\\s*")) {
-            sinkDbSet.addAll(Arrays.stream(environment.getRequiredProperty(sourceDb + ".sink-db-list").split("\\s*,\\s*")).collect(Collectors.toSet()));
-//            In JDK 9+
-//            sinkDbSet.addAll(Set.of(environment.getRequiredProperty(sourceDb + ".sink-db-list").split("\\s*,\\s*")));
-        }
-        return sinkDbSet;
     }
 
     @Override
@@ -93,12 +107,16 @@ public class SyncConfigurerImpl implements SyncConfigurer {
         if(isRefresh) {
             storeSyncColumnList(dbName);
         }
+        if(columnList.containsKey(new Triplet<>(dbName,tableName,op.toString())) == false) {
+            columnList.put(new Triplet<>(dbName,tableName,op.toString()),
+                    new ArrayList(getTableInfo(sinkToSourceMap.get(dbName), tableName).getColumnMap().keySet()));
+        }
         return columnList.get(new Triplet<>(dbName,tableName,op.toString()));
     }
 
     @Override
     public Map<Triplet<String, String, String>, List<String>> getAllColumnList() {
-        for (String db : getSyncDBSet(false) ) {
+        for (String db : getSinkDBSet(false) ) {
             storeSyncColumnList(db);
         }
         return columnList;
@@ -120,5 +138,26 @@ public class SyncConfigurerImpl implements SyncConfigurer {
                 columnList.put(new Triplet<>(dbName, tblName, x.substring(0, px - 1)), Arrays.asList(x.substring(px).split("\\s*,\\s*")));
             }
         }
+    }
+
+    private boolean loadSourceSinkMap() {
+        for (String dbName : getSinkDBSet(false)) {
+            String sourceDB = environment.getProperty(dbName + "." + EnumerationList.Proeprties.SOURCE_DB.getValue());
+            sinkToSourceMap.put(dbName, sourceDB);
+            if(sourceToSinkMap.containsKey(sourceDB) == false) {
+                sourceToSinkMap.put(sourceDB, new ArrayList<>());
+            }
+            sourceToSinkMap.get(sourceDB).add(dbName);
+        }
+        return true;
+    }
+
+    private boolean loadPropertiesMap(String db) {
+        Map<String, String> map = new HashMap<>();
+        for (EnumerationList.Proeprties p : EnumerationList.Proeprties.values()) {
+            map.put(p.toString(), environment.getProperty( db + "." + p.getValue()));
+        }
+        propertiesMap.put(db, map);
+        return true;
     }
 }

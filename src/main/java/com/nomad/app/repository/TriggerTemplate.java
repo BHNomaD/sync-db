@@ -1,6 +1,7 @@
 package com.nomad.app.repository;
 
 import org.javatuples.Triplet;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
 
@@ -8,6 +9,7 @@ import java.util.List;
  * @author Md Shariful Islam
  */
 public interface TriggerTemplate {
+    void init(String dbName, JdbcTemplate jdbcTemplate);
     void process();
     boolean createEventTable();
     List<String> getSyncTableList(String dbName);

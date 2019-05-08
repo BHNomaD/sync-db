@@ -8,7 +8,6 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.sql.SQLException;
 import java.util.List;
 
 /**
@@ -27,10 +26,9 @@ public class FetchDAOImpl implements FetchDAO {
     }
 
     @Override
-    public List<EventLog> getEvent(Integer id, int size) {
+    public List<EventLog> getEvent(int id, int size) {
         try {
-            logger.info("Getting events from source {} id-from {} with size {}",
-                    sourceJdbc.getDataSource().getConnection().getMetaData().getDatabaseProductName(), id, size);
+            logger.info("Getting events id-from {} with size {}", id, size);
 
             String sql =" SELECT ID, ORIGINAL_TABLE_NAME, OPERATION, FILTER, NEW_DATA, OLD_DATA, CREATE_DATE_TIME, STATUS " +
                         " FROM EVENT_LOG WHERE ID > ? ORDER BY ID FETCH NEXT ? ROW ONLY";
@@ -45,8 +43,8 @@ public class FetchDAOImpl implements FetchDAO {
                 .setCreateDateTime(rs.getTimestamp("CREATE_DATE_TIME"))
                 .setStatus(rs.getString("STATUS"))
             , id, size);
-        } catch (SQLException e) {
-            logger.error("Error getting metadata: ", e);
+        } catch (Exception ex) {
+            logger.error("Error getting metadata: ", ex);
             return null;
         }
     }

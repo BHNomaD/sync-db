@@ -1,6 +1,10 @@
 package com.nomad.app.model;
 
+import org.javatuples.Pair;
+
 import java.sql.Timestamp;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author Md Shariful Islam
@@ -8,7 +12,7 @@ import java.sql.Timestamp;
 public class TableInfo {
     Integer id;
     String tableName;
-    String columnList;
+    Map<String, Pair<String, String>> columnMap = new HashMap<>();
     String uniqueColumns;
     Timestamp createDate;
     String status;
@@ -32,12 +36,20 @@ public class TableInfo {
         return this;
     }
 
-    public String getColumnList() {
-        return columnList;
+    public Map<String, Pair<String, String>> getColumnMap() {
+        return columnMap;
     }
 
-    public TableInfo setColumnList(String columnList) {
-        this.columnList = columnList;
+    public TableInfo setColumnMap(Map<String, Pair<String, String>> columnMap) {
+        this.columnMap = columnMap;
+        return this;
+    }
+
+    public TableInfo setColumnMap(String columnListStr) {
+        for (String fragment : columnListStr.split("\\s*,\\s*")) {
+            String[] fragmentArray = fragment.split(" ");
+            this.columnMap.put(fragmentArray[0], new Pair<>(fragmentArray[1], fragmentArray[2]));
+        }
         return this;
     }
 
@@ -73,7 +85,7 @@ public class TableInfo {
         return "TableInfo{" +
                 "id=" + id +
                 ", tableName='" + tableName + '\'' +
-                ", columnList='" + columnList + '\'' +
+                ", columnMap=" + columnMap +
                 ", uniqueColumns='" + uniqueColumns + '\'' +
                 ", createDate=" + createDate +
                 ", status='" + status + '\'' +
