@@ -22,9 +22,6 @@ source:
 sink:
   db-list: sink-db1, sink-db2
 
-test:
-  value: 99
-
 max:
   poolSize: 10
 
@@ -42,30 +39,8 @@ logging:
     org.springframework: ERROR, WARN
 
 # DB Properties
-db1:
-  driver: org.postgresql.Driver
-  url: jdbc:postgresql://_URL_1_:_PORT_1_/_DB1_
-  user: _USER_1_
-  password: _PASS_1_
-  fetchSize: 100
-  otime: 1970-01-01 00:00:00.000000
-  catalog: null
-  schema: _SCHEMA_1_
-  test-table: r4
-
-db2:
-  driver: org.postgresql.Driver
-  url: jdbc:postgresql://_URL_2_:_PORT_2_/_DB2_
-  user: _USER_2_
-  password: _PASS_2_
-  fetchSize: 100
-  otime: 1970-01-01 00:00:00.000000
-  catalog: null
-  schema: _SCHEMA_2_
-  test-table: r1
-
+# source-db-list: db3
 db3:
-  #  driver: oracle.jdbc.OracleDriver
   db-type: oracle
   driver: oracle.jdbc.OracleDriver
   url: jdbc:oracle:thin:@_URL_3_:_PORT_3_:_DB3_
@@ -80,9 +55,7 @@ db3:
   sync-table-info: SYNC_TABLE_INFO
   sink-db-list: sink-db1, sink-db2
 
-#db4:
-#  sink-db-list: sink-db3, sink-db2
-
+#  sink-db-list: sink-db1, sink-db2
 sink-db1:
   db-type: postgresql
   driver: org.postgresql.Driver
