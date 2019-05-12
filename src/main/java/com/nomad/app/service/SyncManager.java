@@ -29,18 +29,6 @@ public class SyncManager {
     @Autowired
     private Environment env;
 
-//    @Autowired
-//    @Qualifier("jdbc-03")
-//    private JdbcTemplate jdbcTemplate03;
-
-//    @Autowired
-//    @Qualifier("sink-jdbc-01")
-//    JdbcTemplate sinkJdbcTemplate1;
-
-//    @Autowired
-//    @Qualifier("sink-dbcon-01")
-//    SinkDBConn sinkDBConn01;
-
     @Autowired
     private BeanFactory beanFactory;
 
@@ -56,7 +44,6 @@ public class SyncManager {
     private static Map<String, OracleTriggerImpl> oracleTriggerMap = new HashMap<>();
     private static Map<String, PostgresDBDAOImpl> postgresDBDAOMap = new HashMap<>();
 
-//    private Thread[] dataImportThread = new Thread[10];
     private List<Thread> dataImportThreadList = new ArrayList<>();
 
 

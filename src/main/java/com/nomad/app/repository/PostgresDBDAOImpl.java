@@ -4,7 +4,6 @@ import com.nomad.app.core.SyncConfigurer;
 import com.nomad.app.model.EnumerationList;
 import com.nomad.app.model.EventLog;
 import com.nomad.app.model.TableInfo;
-import org.javatuples.Pair;
 import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +52,6 @@ public class PostgresDBDAOImpl implements DestinationDBDAO {
 
     private Map<String, String> insertSQLList = new HashMap<>();
     private Map<String, String> deleteSQLList = new HashMap<>();
-//    private Map<String, Pair<String, String>> updateSQLList = new HashMap<>();
 
 
     @Override
