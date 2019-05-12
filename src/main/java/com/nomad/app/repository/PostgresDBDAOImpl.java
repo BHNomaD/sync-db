@@ -101,7 +101,7 @@ public class PostgresDBDAOImpl implements DestinationDBDAO {
         List<EventLog> eventLogList = fetchDAO.getEvent(currentEvenetPos,
                 Integer.parseInt(syncConfigurer.getPropertiesMap(sinkDBName,false)
                         .get(EnumerationList.Proeprties.SYNC_SIZE.toString())));
-
+        logger.info("Event log fetched :: {}", eventLogList.size());
         eventLogList.forEach( eventLog -> {
             if(eventLog.getOperation().equalsIgnoreCase(EnumerationList.Operator.INSERT.toString())) {
                 syncInsert(eventLog.getOriginalTableName(), eventLog.getNewData());
@@ -112,6 +112,10 @@ public class PostgresDBDAOImpl implements DestinationDBDAO {
             }
         });
 
+        if(eventLogList.size() > 0) {
+            currentEvenetPos = eventLogList.get(eventLogList.size() - 1).getId();
+            sinkJdbc.update("UPDATE LKP_SYNC SET VALUE = ? WHERE NAME = ?", currentEvenetPos, "CURRENT_IMPORT_POSITION");
+        }
         return true;
     }
 
@@ -120,7 +124,7 @@ public class PostgresDBDAOImpl implements DestinationDBDAO {
         Map<String, Object> dataMap = getByteArrayToDataMap(tableName, data);
         List<Object> insertObjectList = prepareObjectList(dataMap,
                 syncConfigurer.getSyncColumnList(sinkDBName,tableName,EnumerationList.Operator.INSERT,false));
-        sinkJdbc.update(insertSQLList.get(tableName), insertObjectList);
+        sinkJdbc.update(insertSQLList.get(tableName), insertObjectList.toArray());
         return true;
     }
 
@@ -129,7 +133,7 @@ public class PostgresDBDAOImpl implements DestinationDBDAO {
         Map<String, Object> dataMap = getStringToDataMap(tableName, filter);
         List<Object> filterObjectList = prepareObjectList(dataMap,
                 syncConfigurer.getSyncColumnList(sinkDBName,tableName,EnumerationList.Operator.DELETE,false));
-        sinkJdbc.update(deleteSQLList.get(tableName), filterObjectList);
+        sinkJdbc.update(deleteSQLList.get(tableName), filterObjectList.toArray());
         return true;
     }
 
@@ -155,7 +159,7 @@ public class PostgresDBDAOImpl implements DestinationDBDAO {
         });
 
         String sql = "UPDATE " + tableName.toUpperCase() + " SET " + ref.prefix.substring(1) + " WHERE " + ref.suffix.substring(1);
-        sinkJdbc.update(sql, ref.objectList);
+        sinkJdbc.update(sql, ref.objectList.toArray());
 
         return true;
     }
@@ -230,7 +234,7 @@ public class PostgresDBDAOImpl implements DestinationDBDAO {
     }
 
     private Map<String, Object> getByteArrayToDataMap(String tableName, byte[] data) {
-        String dataStr = data.toString();
+        String dataStr = new String(data);
         return getStringToDataMap(tableName, dataStr);
     }
 
@@ -243,7 +247,7 @@ public class PostgresDBDAOImpl implements DestinationDBDAO {
             String[] fragmentArray = fragment.split("\\s*>\\s*");
 
             Object object = null;
-            String columnType = tableInfo.getColumnMap().get(fragmentArray[0]).getValue1();
+            String columnType = tableInfo.getColumnMap().get(fragmentArray[0]).getValue0();
             if( columnType.equalsIgnoreCase("VARCHAR") || columnType.equalsIgnoreCase("VARCHAR2")) {
                 object = fragmentArray[1];
             } else if(columnType.equalsIgnoreCase("INT")) {

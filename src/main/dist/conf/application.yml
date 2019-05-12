@@ -20,7 +20,7 @@ source:
   db-list: db3
 
 sink:
-  db-list: sink-db1
+  db-list: sink-db1, sink-db2
 
 test:
   value: 99
@@ -78,7 +78,7 @@ db3:
   event-log-table-name: EVENT_LOG
   event-log-column-list: ID,ORIGINAL_TABLE_NAME,OPERATION,FILTER,NEW_DATA,OLD_DATA,CREATE_DATE_TIME,STATUS
   sync-table-info: SYNC_TABLE_INFO
-  sink-db-list: sink-db1
+  sink-db-list: sink-db1, sink-db2
 
 #db4:
 #  sink-db-list: sink-db3, sink-db2
@@ -96,4 +96,19 @@ sink-db1:
   sync-size: 5
   sync-table-list: TB1[UPDATE(ID,VALUE),INSERT(ID,VALUE,REMARKS)], BIOMETRIC[], SUPPLIER[UPDATE(SUPPLIER_ID,VALUE),INSERT(SUPPLIER_ID,VALUE)]
   db-config-name: sink-db1
+  source-db: db3
+
+sink-db2:
+  db-type: postgresql
+  driver: org.postgresql.Driver
+  url: jdbc:postgresql://_URL_5_:_PORT_5_/_DB5_
+  user: _USER_5_
+  password: _PASS_5_
+  fetchSize: 100
+  otime: 1970-01-01 00:00:00.000000
+  catalog: null
+  schema: _SCHEMA_5_
+  sync-size: 5
+  sync-table-list: TB1[UPDATE(ID,VALUE),INSERT(ID,VALUE,REMARKS)], BIOMETRIC[], SUPPLIER[UPDATE(SUPPLIER_ID,VALUE),INSERT(SUPPLIER_ID,VALUE)]
+  db-config-name: sink-db2
   source-db: db3

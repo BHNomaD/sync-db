@@ -98,8 +98,6 @@ public class SyncManager {
 
         logger.info("started concurrent data import for sink databases");
 
-        //TODO
-        //postgresDBDAOMap.forEach( (dbName, postgresqDB) -> postgresqDB.dataImport());
         concurentImport();
     }
 
@@ -109,14 +107,16 @@ public class SyncManager {
             int threadIndex = 0;
 
             dataImportThreadList.add(new Thread(() -> {
-                postgresDBDAO.dataImport();
+                while (true) {
+                    postgresDBDAO.dataImport();
+                    try {
+                        Thread.sleep(5000);
+                    } catch (InterruptedException e) {
+                        break;
+                    }
+                }
             }, "data-import-thread-" + threadIndex));
-
-//            dataImportThread[threadIndex++] = new Thread(() -> {
-//                postgresDBDAO.dataImport();
-//            }, "data-import-thread-" + threadIndex);
         });
-//        Arrays.stream(dataImportThread).forEach(Thread::start);
         dataImportThreadList.forEach(Thread::start);
     }
 
@@ -142,41 +142,4 @@ public class SyncManager {
     public Map<String, JdbcTemplate> getSinkDBMap() {
         return sinkDBMap;
     }
-
-/*
-    private void testCode() {
-        try {
-            //Create triggers for sync-table-list
-            oracleTrigger.process();
-            FetchDAO fetchDAO01 = beanFactory.getBean(FetchDAO.class, jdbcTemplate03);
-            List<EventLog> eventLogList = fetchDAO01.getEvent(1, Integer.parseInt(env.getRequiredProperty("sink-db1.sync-size")));
-            System.out.println(eventLogList);
-
-            PostgresDBDAOImpl postgresDBDAO01 = beanFactory.getBean(PostgresDBDAOImpl.class, jdbcTemplate03, sinkDBConn01);
-            postgresDBDAO01.init();
-            postgresDBDAO01.syncData(false, false, false);
-            System.out.println(postgresDBDAO01.getSyncConfig());
-
-            postgresDBDAO01.dataImport();
-
-            DestinationDBDAO postgresDBDAO02 = beanFactory.getBean(DestinationDBDAO.class, jdbcTemplate03, sinkDBConn01);
-            postgresDBDAO02.init();
-            postgresDBDAO02.syncData(true, true, false);
-            System.out.println(postgresDBDAO02.getSyncConfig());
-//            TODO auto-determine sink-db-name
-
-
-            //TODO
-            String db = "sink-db1", tbl = "TB1", opr = EnumerationList.Operator.UPDATE.toString();
-            List<String> cList = syncConfigurer.getSyncColumnList(db, tbl, EnumerationList.Operator.UPDATE, false);
-            cList.forEach( x -> System.out.println(db + "::" + tbl + "::" + opr + ":-->:" + x ));
-
-            postgresDBDAO01.createSyncTable("TB1");
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-
-    }
-*/
-
 }
