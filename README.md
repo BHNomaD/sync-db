@@ -13,6 +13,7 @@ Application for synchronizing oracle-database with different databases
 
 * Set valid configaration to the application.yml file
 * sh starup.sh
+* SyncClient sample argument "jdbc:oracle:thin:@_URL_:1521:_DB_NAME TULIP tulip BIOMETRIC,SUPPLIER"
 
 ### Test Branch Brief
 * Create config class from the properties

@@ -12,6 +12,7 @@ import java.io.IOException;
 public class SyncClient {
 
     //args:: [url, user-name, password, table-name]
+    //sample:: jdbc:oracle:thin:@_URL_:1521:_DB_NAME TULIP tulip BIOMETRIC,SUPPLIER
     public static void main(String[] args) {
         if(args.length != 4) {
             System.out.println("Incorrect argument count. Expected 4 found " + args.length);
