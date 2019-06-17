@@ -1,6 +1,7 @@
 package com.nomad.app.repository;
 
 import com.nomad.app.model.EnumerationList;
+import com.zaxxer.hikari.HikariDataSource;
 import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,9 +9,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.core.env.Environment;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -34,21 +38,47 @@ public class OracleTriggerImpl implements TriggerTemplate {
     private JdbcTemplate jdbcTemplate;
     private String schema;
     private String catalog;
-    private String eventLongTableName;
+    private String eventLogTableName;
     private String syncTableInfo;
     private String syncTableList;
     private String eventLogColumnNames;
-
+    private boolean writeTriggerToFileOnly;
+    private BufferedWriter writer;
 
     @Override
     public void init(String dbName, JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
         this.schema = env.getProperty(dbName + "." + EnumerationList.Proeprties.SCHEMA.getValue());
         this.catalog = env.getProperty(dbName + "." + EnumerationList.Proeprties.CATALOG.getValue());
-        this.eventLongTableName = env.getProperty(dbName + "." + EnumerationList.Proeprties.EVENT_LOG_TABLE_NAME.getValue());
+        this.eventLogTableName = env.getProperty(dbName + "." + EnumerationList.Proeprties.EVENT_LOG_TABLE_NAME.getValue());
         this.syncTableInfo = env.getProperty(dbName + "." + EnumerationList.Proeprties.SYNC_TABLE_INFO.getValue());
         this.syncTableList = env.getProperty(dbName + "." + EnumerationList.Proeprties.SYNC_TABLE_LIST.getValue());
         this.eventLogColumnNames = env.getProperty(dbName + "." + EnumerationList.Proeprties.EVENT_LOG_COLUMN_LIST.getValue());
+        this.writeTriggerToFileOnly = false;
+    }
+
+    public void writeTrigger(String url, String userName, String password, String tableList, BufferedWriter writer) throws IOException {
+
+        HikariDataSource dataSource = new HikariDataSource();
+        dataSource.setDriverClassName("oracle.jdbc.OracleDriver");
+        dataSource.setJdbcUrl(url);
+        dataSource.setUsername(userName);
+        dataSource.setPassword(password);
+        dataSource.setAutoCommit(true);
+        dataSource.setMaximumPoolSize(10);
+
+        this.jdbcTemplate = new JdbcTemplate(dataSource);
+        this.jdbcTemplate.setFetchSize(100);
+
+        this.schema = userName;
+        this.catalog = "";
+        this.eventLogTableName = "EVENT_LOG";
+        this.syncTableInfo = "SYNC_TABLE_INFO";
+        this.syncTableList = tableList;
+        this.eventLogColumnNames = "ID,ORIGINAL_TABLE_NAME,OPERATION,FILTER,NEW_DATA,OLD_DATA,CREATE_DATE_TIME,STATUS";
+        this.writeTriggerToFileOnly = true;
+        this.writer = writer;
+        this.commonDAO = new CommonDAOImpl();
     }
 
     @Override
@@ -99,7 +129,7 @@ public class OracleTriggerImpl implements TriggerTemplate {
                     "   STATUS VARCHAR2(50) NOT NULL " +
                     ")";
 
-        return createTableWithSeq(eventLongTableName, sql);
+        return createTableWithSeq(eventLogTableName, sql);
     }
 
     @Override
@@ -133,20 +163,14 @@ public class OracleTriggerImpl implements TriggerTemplate {
         String restriction = " ";
         String actionWhen = " FOR EACH ROW ";
         String actionBody = " BEGIN " +
-                            " INSERT INTO " + eventLongTableName + " ( " + eventLogColumnNames + " ) " +
+                            " INSERT INTO " + eventLogTableName + " ( " + eventLogColumnNames + " ) " +
                             " VALUES " + " ( " +
-                eventLongTableName.toUpperCase() + "_PK_SEQ.nextval, " + " \'" + tableName.toUpperCase() + "\', \'INSERT\', " +
+                eventLogTableName.toUpperCase() + "_PK_SEQ.nextval, " + " \'" + tableName.toUpperCase() + "\', \'INSERT\', " +
                 filter + ", " + newValues + ", NULL, current_timestamp, \'active\'" +
                             " ); " +
                             " END; ";
 
-        String sql = "CREATE OR REPLACE TRIGGER " + name + statement + restriction + actionWhen + actionBody;
-
-        try {
-            jdbcTemplate.execute(sql);
-        } catch (Exception ex) {
-            logger.error("Error Creating Trigger with name " + name, ex);
-        }
+        writeORInsertSQL(name, statement, restriction, actionWhen, actionBody);
     }
 
     @Override
@@ -160,20 +184,14 @@ public class OracleTriggerImpl implements TriggerTemplate {
         String restriction = " ";
         String actionWhen = " FOR EACH ROW ";
         String actionBody = " BEGIN " +
-                            " INSERT INTO " + eventLongTableName + " ( " + eventLogColumnNames + " ) " +
+                            " INSERT INTO " + eventLogTableName + " ( " + eventLogColumnNames + " ) " +
                             " VALUES " + " ( " +
-                eventLongTableName.toUpperCase() + "_PK_SEQ.nextval, " + " \'" + tableName.toUpperCase() + "\', \'DELETE\', " +
+                eventLogTableName.toUpperCase() + "_PK_SEQ.nextval, " + " \'" + tableName.toUpperCase() + "\', \'DELETE\', " +
                 filter + ", NULL, " + oldValues + ", current_timestamp, \'active\'" +
                             " ); " +
                             " END; ";
 
-        String sql = "CREATE OR REPLACE TRIGGER " + name + statement + restriction + actionWhen + actionBody;
-
-        try {
-            jdbcTemplate.execute(sql);
-        } catch (Exception ex) {
-            logger.error("Error Creating Trigger with name " + name, ex);
-        }
+        writeORInsertSQL(name, statement, restriction, actionWhen, actionBody);
     }
 
     @Override
@@ -184,7 +202,7 @@ public class OracleTriggerImpl implements TriggerTemplate {
         String updatingStr = "";
         for (String col : columnList) {
             updatingStr = updatingStr + " IF UPDATING (\'" + col + "\') THEN " +
-                                        " nd := nd || \', " + col + " >" + col + "; " +
+                                        " nd := nd || \', " + col + " > \' || :new." + col + ";" +
                                         " od := od || \', " + col + " > \' || :old." + col + "; END IF; ";
         }
         updatingStr = updatingStr + " nd := SUBSTR(nd, 3); od := SUBSTR(od, 3); ";
@@ -195,17 +213,27 @@ public class OracleTriggerImpl implements TriggerTemplate {
         String actionWhen = " FOR EACH ROW DECLARE nd CLOB; od CLOB; ";
         String actionBody = " BEGIN " +
                             updatingStr +
-                            " INSERT INTO " + eventLongTableName + " ( " + eventLogColumnNames + " ) " +
+                            " INSERT INTO " + eventLogTableName + " ( " + eventLogColumnNames + " ) " +
                             " VALUES " + " ( " +
-                eventLongTableName.toUpperCase() + "_PK_SEQ.nextval, " + " \'" + tableName.toUpperCase() + "\', \'UPDATE\', " +
+                eventLogTableName.toUpperCase() + "_PK_SEQ.nextval, " + " \'" + tableName.toUpperCase() + "\', \'UPDATE\', " +
                 filter + ", " + "nd " + ", " + "od " + ", current_timestamp, \'active\'" +
                             " ); " +
                             " END; ";
 
+        writeORInsertSQL(name, statement, restriction, actionWhen, actionBody);
+    }
+
+    private void writeORInsertSQL(String name, String statement, String restriction, String actionWhen, String actionBody) {
         String sql = "CREATE OR REPLACE TRIGGER " + name + statement + restriction + actionWhen + actionBody;
 
         try {
-            jdbcTemplate.execute(sql);
+            if(writeTriggerToFileOnly) {
+                this.writer.newLine();
+                this.writer.write(sql);
+                this.writer.newLine();
+            } else {
+                jdbcTemplate.execute(sql);
+            }
         } catch (Exception ex) {
             logger.error("Error Creating Trigger with name " + name, ex);
         }
@@ -238,6 +266,8 @@ public class OracleTriggerImpl implements TriggerTemplate {
 
         try {
             jdbcTemplate.update(sql, tableName, columnWithType, uniqueColumns, "active");
+        } catch (DuplicateKeyException dux) {
+            logger.warn("Duplicate key error");
         } catch (Exception ex) {
             logger.error("Error inserting sync-table-info with table-name {}", tableName);
             return false;
